@@ -1,0 +1,32 @@
+name: stage2
+on: workflow_dispatch
+jobs:
+  build:
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 340
+    env:
+      LFS: /mnt/lfs
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Host setup
+        run: bash scripts/00-host-setup.sh
+      - name: Restore stage1
+        run: |
+          gh release download stage1 -p stage1.tar.zst
+          sudo tar --zstd -xpf stage1.tar.zst -C $LFS
+          sudo chown -R $(id -u):$(id -g) $LFS
+          rm stage1.tar.zst
+          mkdir -p $LFS/sources logs
+          ls $LFS
+      - name: Download and verify sources
+        run: bash scripts/01-sources.sh
+      - name: Chapter 6 temporary tools
+        run: bash scripts/03-temptools.sh
+      - name: Pack
+        run: sudo tar -C $LFS --exclude=./sources -I 'zstd -T0 -12' -cf stage2.tar.zst .
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with: { name: stage2-logs, path: logs/ }
+      - uses: softprops/action-gh-release@v2
+        with: { tag_name: stage2, files: stage2.tar.zst }
