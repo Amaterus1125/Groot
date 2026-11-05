@@ -25,9 +25,9 @@ jobs:
       - name: Download missing sources
         run: bash scripts/01-sources.sh
       - name: Chroot Setup & Build
-        run: sudo bash scripts/03-chroot-setup.sh
+        run: sudo bash scripts/04-chroot-setup.sh
       - name: Unmount & Cleanup
-        run: sudo bash scripts/05-unmount.sh
+        run: sudo bash scripts/06-unmount.sh
       - name: Pack
         run: sudo tar -C $LFS --exclude=./sources -I 'zstd -T0 -12' -cf stage3.tar.zst .
       - uses: actions/upload-artifact@v4
