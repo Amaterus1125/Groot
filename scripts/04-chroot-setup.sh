@@ -21,10 +21,9 @@ else
   mount -vt tmpfs -o nosuid,nodev tmpfs $LFS/dev/shm
 fi
 
-# Create tmp folder and pass the build script into the chroot
-mkdir -p $LFS/tmp
-cp scripts/05-chroot-build.sh $LFS/tmp/
-chmod +x $LFS/tmp/05-chroot-build.sh
+# Pass the build script into the chroot using the sources folder (which is guaranteed to exist)
+cp scripts/05-chroot-build.sh $LFS/sources/
+chmod +x $LFS/sources/05-chroot-build.sh
 
 echo "==> Entering Chroot..."
 chroot "$LFS" /usr/bin/env -i \
@@ -34,4 +33,4 @@ chroot "$LFS" /usr/bin/env -i \
     PATH=/usr/bin:/usr/sbin \
     MAKEFLAGS="-j$(nproc)" \
     TESTSUITEFLAGS="-j$(nproc)" \
-    /bin/bash --login -c "/tmp/05-chroot-build.sh"
+    /bin/bash --login -c "/sources/05-chroot-build.sh"
