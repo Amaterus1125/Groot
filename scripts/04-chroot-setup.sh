@@ -21,7 +21,8 @@ else
   mount -vt tmpfs -o nosuid,nodev tmpfs $LFS/dev/shm
 fi
 
-# Pass the build script into the chroot (UPDATED TO 05)
+# Create tmp folder and pass the build script into the chroot
+mkdir -p $LFS/tmp
 cp scripts/05-chroot-build.sh $LFS/tmp/
 chmod +x $LFS/tmp/05-chroot-build.sh
 
