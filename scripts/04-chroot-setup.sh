@@ -21,7 +21,8 @@ else
   mount -vt tmpfs -o nosuid,nodev tmpfs $LFS/dev/shm
 fi
 
-# Pass the build script into the chroot using the sources folder (which is guaranteed to exist)
+echo "==> [FIXED] Copying build script..."
+mkdir -p $LFS/sources
 cp scripts/05-chroot-build.sh $LFS/sources/
 chmod +x $LFS/sources/05-chroot-build.sh
 
