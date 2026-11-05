@@ -1,36 +1,37 @@
-#!/bin/bash
-set -euo pipefail
-LFS=/mnt/lfs
-
-echo "==> Changing Ownership to root..."
-chown -R root:root $LFS/{usr,var,etc,tools}
-case $(uname -m) in
-  x86_64) chown -R root:root $LFS/lib64 ;;
-esac
-
-echo "==> Preparing Virtual Kernel File Systems..."
-mkdir -pv $LFS/{dev,proc,sys,run}
-mount -v --bind /dev $LFS/dev
-mount -vt devpts devpts -o gid=5,mode=0620 $LFS/dev/pts
-mount -vt proc proc $LFS/proc
-mount -vt sysfs sysfs $LFS/sys
-mount -vt tmpfs tmpfs $LFS/run
-if [ -h $LFS/dev/shm ]; then
-  install -v -d -m 1777 $LFS$(realpath /dev/shm)
-else
-  mount -vt tmpfs -o nosuid,nodev tmpfs $LFS/dev/shm
-fi
-
-# Pass the build script into the chroot
-cp scripts/04-chroot-build.sh $LFS/tmp/
-chmod +x $LFS/tmp/04-chroot-build.sh
-
-echo "==> Entering Chroot..."
-chroot "$LFS" /usr/bin/env -i \
-    HOME=/root \
-    TERM="${TERM:-xterm}" \
-    PS1='(lfs chroot) \u:\w\$ ' \
-    PATH=/usr/bin:/usr/sbin \
-    MAKEFLAGS="-j$(nproc)" \
-    TESTSUITEFLAGS="-j$(nproc)" \
-    /bin/bash --login -c "/tmp/04-chroot-build.sh"
+name: stage3
+on: workflow_dispatch
+jobs:
+  build:
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 340
+    env:
+      LFS: /mnt/lfs
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Free disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/lib/android
+          df -h /
+      - name: Host setup
+        run: bash scripts/00-host-setup.sh
+      - name: Restore stage2
+        run: |
+          gh release download stage2 -p stage2.tar.zst
+          sudo tar --zstd -xpf stage2.tar.zst -C $LFS
+          sudo chown -R $(id -u):$(id -g) $LFS
+          rm stage2.tar.zst
+          mkdir -p $LFS/sources logs
+      - name: Download missing sources
+        run: bash scripts/01-sources.sh
+      - name: Chroot Setup & Build
+        run: sudo bash scripts/04-chroot-setup.sh
+      - name: Unmount & Cleanup
+        run: sudo bash scripts/06-unmount.sh
+      - name: Pack
+        run: sudo tar -C $LFS --exclude=./sources -I 'zstd -T0 -12' -cf stage3.tar.zst .
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with: { name: stage3-logs, path: logs/ }
+      - uses: softprops/action-gh-release@v2
+        with: { tag_name: stage3, files: stage3.tar.zst }
