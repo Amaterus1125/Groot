@@ -7,20 +7,20 @@ export S="/sources"
 # --- Build Functions ---
 
 pkg_manpages() {
-  cd "$S"; tar -xf man-pages-*.tar.xz; cd man-pages-*/
+  cd "$S"; tar -xf man-pages-*.tar.*; cd man-pages-*/
   rm -v man3/crypt*
   make -R GIT=false prefix=/usr install
   cd "$S"; rm -rf man-pages-*/
 }
 
 pkg_iana() {
-  cd "$S"; tar -xf iana-etc-*.tar.gz; cd iana-etc-*/
+  cd "$S"; tar -xf iana-etc-*.tar.*; cd iana-etc-*/
   cp -v services protocols /etc
   cd "$S"; rm -rf iana-etc-*/
 }
 
 pkg_glibc() {
-  cd "$S"; tar -xf glibc-*.tar.xz; cd glibc-*/
+  cd "$S"; tar -xf glibc-*.tar.*; cd glibc-*/
   patch -Np1 -i ../glibc-fhs-1.patch
   mkdir -v build; cd build
   echo "rootsbindir=/usr/sbin" > configparms
@@ -73,7 +73,7 @@ EOF
 }
 
 pkg_zlib() {
-  cd "$S"; tar -xf zlib-*.tar.xz; cd zlib-*/
+  cd "$S"; tar -xf zlib-*.tar.*; cd zlib-*/
   ./configure --prefix=/usr
   make
   make install
@@ -82,7 +82,7 @@ pkg_zlib() {
 }
 
 pkg_bzip2() {
-  cd "$S"; tar -xf bzip2-*.tar.gz; cd bzip2-*/
+  cd "$S"; tar -xf bzip2-*.tar.*; cd bzip2-*/
   patch -Np1 -i ../bzip2-1.0.8-install_docs-1.patch
   sed -i 's@\(ln -s -f \)$(PREFIX)/bin/@\1@' Makefile
   sed -i "s@(PREFIX)/man@(PREFIX)/share/man@g" Makefile
@@ -100,7 +100,7 @@ pkg_bzip2() {
 }
 
 pkg_xz() {
-  cd "$S"; tar -xf xz-*.tar.xz; cd xz-*/
+  cd "$S"; tar -xf xz-*.tar.*; cd xz-*/
   ./configure --prefix=/usr --disable-static --docdir=/usr/share/doc/xz-5.8.2
   make
   make install
@@ -108,14 +108,14 @@ pkg_xz() {
 }
 
 pkg_lz4() {
-  cd "$S"; tar -xf lz4-*.tar.gz; cd lz4-*/
+  cd "$S"; tar -xf lz4-*.tar.*; cd lz4-*/
   make BUILD_STATIC=no PREFIX=/usr
   make BUILD_STATIC=no PREFIX=/usr install
   cd "$S"; rm -rf lz4-*/
 }
 
 pkg_zstd() {
-  cd "$S"; tar -xf zstd-*.tar.gz; cd zstd-*/
+  cd "$S"; tar -xf zstd-*.tar.*; cd zstd-*/
   make prefix=/usr
   make prefix=/usr install
   rm -v /usr/lib/libzstd.a
@@ -123,7 +123,7 @@ pkg_zstd() {
 }
 
 pkg_file() {
-  cd "$S"; tar -xf file-*.tar.gz; cd file-*/
+  cd "$S"; tar -xf file-*.tar.*; cd file-*/
   ./configure --prefix=/usr
   make
   make install
@@ -131,7 +131,7 @@ pkg_file() {
 }
 
 pkg_readline() {
-  cd "$S"; tar -xf readline-*.tar.gz; cd readline-*/
+  cd "$S"; tar -xf readline-*.tar.*; cd readline-*/
   sed -i '/MV.*old/d' Makefile.in
   sed -i '/{OLDSUFF}/c:' support/shlib-install
   sed -i 's/-Wl,-rpath,[^ ]*//' support/shobj-conf
@@ -144,7 +144,7 @@ pkg_readline() {
 }
 
 pkg_pcre2() {
-  cd "$S"; tar -xf pcre2-*.tar.bz2 || tar -xf pcre2-*.tar.gz; cd pcre2-*/
+  cd "$S"; tar -xf pcre2-*.tar.*; cd pcre2-*/
   ./configure --prefix=/usr --docdir=/usr/share/doc/pcre2-10.47 \
     --enable-unicode --enable-jit --enable-pcre2-16 --enable-pcre2-32 \
     --enable-pcre2grep-libz --enable-pcre2grep-libbz2 \
@@ -155,7 +155,7 @@ pkg_pcre2() {
 }
 
 pkg_m4() {
-  cd "$S"; tar -xf m4-*.tar.xz; cd m4-*/
+  cd "$S"; tar -xf m4-*.tar.*; cd m4-*/
   ./configure --prefix=/usr
   make
   make install
@@ -163,7 +163,7 @@ pkg_m4() {
 }
 
 pkg_bc() {
-  cd "$S"; tar -xf bc-*.tar.xz; cd bc-*/
+  cd "$S"; tar -xf bc-*.tar.*; cd bc-*/
   CC='gcc -std=c99' ./configure --prefix=/usr -G -O3 -r
   make
   make install
@@ -171,7 +171,7 @@ pkg_bc() {
 }
 
 pkg_flex() {
-  cd "$S"; tar -xf flex-*.tar.gz; cd flex-*/
+  cd "$S"; tar -xf flex-*.tar.*; cd flex-*/
   ./configure --prefix=/usr --disable-static --docdir=/usr/share/doc/flex-2.6.4
   make
   make install
@@ -181,7 +181,7 @@ pkg_flex() {
 }
 
 pkg_tcl() {
-  cd "$S"; tar -xf tcl*-src.tar.gz; cd tcl*/
+  cd "$S"; tar -xf tcl*-src.tar.*; cd tcl*/
   SRCDIR=$(pwd)
   cd unix
   ./configure --prefix=/usr --mandir=/usr/share/man --disable-rpath
@@ -203,7 +203,7 @@ pkg_tcl() {
 }
 
 pkg_expect() {
-  cd "$S"; tar -xf expect*.tar.gz; cd expect*/
+  cd "$S"; tar -xf expect*.tar.*; cd expect*/
   patch -Np1 -i ../expect-5.45.4-gcc15-1.patch
   ./configure --prefix=/usr --with-tcl=/usr/lib --enable-shared --disable-rpath --mandir=/usr/share/man --with-tclinclude=/usr/include
   make
@@ -213,7 +213,7 @@ pkg_expect() {
 }
 
 pkg_dejagnu() {
-  cd "$S"; tar -xf dejagnu-*.tar.gz; cd dejagnu-*/
+  cd "$S"; tar -xf dejagnu-*.tar.*; cd dejagnu-*/
   mkdir -v build; cd build
   ../configure --prefix=/usr
   makeinfo --html --no-split -o doc/dejagnu.html ../doc/dejagnu.texi
@@ -225,7 +225,7 @@ pkg_dejagnu() {
 }
 
 pkg_pkgconf() {
-  cd "$S"; tar -xf pkgconf-*.tar.xz; cd pkgconf-*/
+  cd "$S"; tar -xf pkgconf-*.tar.*; cd pkgconf-*/
   ./configure --prefix=/usr --disable-static --docdir=/usr/share/doc/pkgconf-2.5.1
   make
   make install
@@ -235,7 +235,7 @@ pkg_pkgconf() {
 }
 
 pkg_binutils() {
-  cd "$S"; tar -xf binutils-*.tar.xz; cd binutils-*/
+  cd "$S"; tar -xf binutils-*.tar.*; cd binutils-*/
   mkdir -v build; cd build
   ../configure --prefix=/usr --sysconfdir=/etc --enable-ld=default \
     --enable-plugins --enable-shared --disable-werror \
@@ -248,7 +248,7 @@ pkg_binutils() {
 }
 
 pkg_gmp() {
-  cd "$S"; tar -xf gmp-*.tar.xz; cd gmp-*/
+  cd "$S"; tar -xf gmp-*.tar.*; cd gmp-*/
   sed -i '/long long t1/,+1s/()/(...)/' configure
   ./configure --prefix=/usr --enable-cxx --disable-static --docdir=/usr/share/doc/gmp-6.3.0
   make
@@ -259,7 +259,7 @@ pkg_gmp() {
 }
 
 pkg_mpfr() {
-  cd "$S"; tar -xf mpfr-*.tar.xz; cd mpfr-*/
+  cd "$S"; tar -xf mpfr-*.tar.*; cd mpfr-*/
   ./configure --prefix=/usr --disable-static --enable-thread-safe --docdir=/usr/share/doc/mpfr-4.2.2
   make
   make html
@@ -269,7 +269,7 @@ pkg_mpfr() {
 }
 
 pkg_mpc() {
-  cd "$S"; tar -xf mpc-*.tar.gz; cd mpc-*/
+  cd "$S"; tar -xf mpc-*.tar.*; cd mpc-*/
   ./configure --prefix=/usr --disable-static --docdir=/usr/share/doc/mpc-1.3.1
   make
   make html
@@ -279,7 +279,7 @@ pkg_mpc() {
 }
 
 pkg_attr() {
-  cd "$S"; tar -xf attr-*.tar.gz; cd attr-*/
+  cd "$S"; tar -xf attr-*.tar.*; cd attr-*/
   ./configure --prefix=/usr --disable-static --sysconfdir=/etc --docdir=/usr/share/doc/attr-2.5.2
   make
   make install
@@ -287,7 +287,7 @@ pkg_attr() {
 }
 
 pkg_acl() {
-  cd "$S"; tar -xf acl-*.tar.xz; cd acl-*/
+  cd "$S"; tar -xf acl-*.tar.*; cd acl-*/
   ./configure --prefix=/usr --disable-static --docdir=/usr/share/doc/acl-2.3.2
   make
   make install
