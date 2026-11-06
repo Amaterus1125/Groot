@@ -172,7 +172,7 @@ pkg_m4() {
 
 pkg_bc() {
   cd "$S"; tar -xf bc-*.tar.*; cd bc-*/
-  CC='gcc -std=c99' ./configure --prefix=/usr --build=$BLD_TGT -G -O3 -r
+  CC=gcc ./configure --prefix=/usr -G -O3 -r
   make
   make install
   cd "$S"; rm -rf bc-*/
