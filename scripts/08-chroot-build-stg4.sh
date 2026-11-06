@@ -57,7 +57,7 @@ EOF
     zic -L leapseconds -d $ZONEINFO/right ${tz}
   done
   cp -v zone.tab zone1970.tab iso3166.tab $ZONEINFO
-  zic -d $ZONEINFO -P America/New_York
+  zic -d $ZONEINFO -p America/New_York
   
   # Set localtime to Asia/Kolkata for you
   ln -sfv /usr/share/zoneinfo/Asia/Kolkata /etc/localtime
