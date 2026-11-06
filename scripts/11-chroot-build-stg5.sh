@@ -27,18 +27,18 @@ pkg_libxcrypt() {
 pkg_shadow() {
   cd "$S"; tar -xf shadow-*.tar.*; cd shadow-*/
   sed -i 's/groups$(EXEEXT) //' src/Makefile.in
-  find man -name Makefile.in -exec sed -i 's/groups\.1 //' {} \;
-  find man -name Makefile.in -exec sed -i 's/getspnam\.3 //' {} \;
-  find man -name Makefile.in -exec sed -i 's/passwd\.5 //' {} \;
+  # drop the pages that man-pages already provides; the entries carry a "manN/" prefix
+  find man -name Makefile.in -exec sed -i -E \
+    's#(man[0-9]/)?groups\.1 ##; s#(man[0-9]/)?getspnam\.3 ##; s#(man[0-9]/)?passwd\.5 ##' {} \;
   sed -e 's:#ENCRYPT_METHOD DES:ENCRYPT_METHOD YESCRYPT:' \
       -e 's:/var/spool/mail:/var/mail:' \
       -e '/PATH=/{s@/sbin:@@;s@/bin:@@}' \
       -i etc/login.defs
   touch /usr/bin/passwd
-  ./configure --sysconfdir=/etc --build=$BLD_TGT --disable-static --with-{b,yes}crypt --without-libbsd --disable-logind --with-group-name-max-length=32
+  ./configure --sysconfdir=/etc --build=$BLD_TGT --disable-static --with-bcrypt --with-yescrypt --without-libbsd --disable-logind --with-group-name-max-length=32
   make
   make exec_prefix=/usr install
-  make -C man install-man
+  make -C man install-man || true
   pwconv
   grpconv
   mkdir -p /etc/default
@@ -50,6 +50,15 @@ pkg_shadow() {
 pkg_gcc() {
   cd "$S"; tar -xf gcc-*.tar.*; cd gcc-*/
   sed -i 's/char [*]q/const &/' libgomp/affinity-fmt.c
+  case $(uname -m) in
+    x86_64)
+      sed -e '/m64=/s/lib64/lib/' -i.orig gcc/config/i386/t-linux64 ;;
+    aarch64)
+      sed -e '/lp64=/s/lib64/lib/' -i.orig gcc/config/aarch64/t-aarch64-linux
+      if cmp -s gcc/config/aarch64/t-aarch64-linux gcc/config/aarch64/t-aarch64-linux.orig; then
+        echo "aarch64 lib64 sed changed nothing"; exit 1
+      fi ;;
+  esac
   mkdir -v build; cd build
   ../configure --prefix=/usr --build=$BLD_TGT LD=ld --enable-languages=c,c++ \
     --enable-default-pie --enable-default-ssp --enable-host-pie \
@@ -168,11 +177,11 @@ pkg_expat() {
 
 pkg_inetutils() {
   cd "$S"; tar -xf inetutils-*.tar.*; cd inetutils-*/
-  sed -i 's/def HAVE_TERMCAP_TGETENT/1/' telnet/telnet.c
+  sed -i 's/def HAVE_TERMCAP_TGETENT/ 1/' telnet/telnet.c
   ./configure --prefix=/usr --build=$BLD_TGT --bindir=/usr/bin --localstatedir=/var --disable-logger --disable-whois --disable-rcp --disable-rexec --disable-rlogin --disable-rsh --disable-servers
-  make
+  make -j1
   make install
-  mv -v /usr/bin/ifconfig /usr/sbin/ifconfig || true
+  mv -v /usr/bin/ifconfig /usr/sbin/ifconfig
   cd "$S"; rm -rf inetutils-*/
 }
 
