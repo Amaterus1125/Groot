@@ -1,6 +1,7 @@
 #!/bin/bash
 set -euo pipefail
-export LOGS="/tmp/logs"
+# Save logs directly to sources so they survive /tmp cleanup
+export LOGS="/sources/chroot-stg7-logs"
 mkdir -p "$LOGS"
 export S="/sources"
 export BLD_TGT="$(uname -m)-unknown-linux-gnu"
@@ -67,17 +68,19 @@ EOF
 }
 
 pkg_markupsafe() {
-  cd "$S"; tar -xf MarkupSafe-*.tar.*; cd MarkupSafe-*/
+  # Use case-insensitive wildcard for lowercase PyPI tarballs
+  cd "$S"; tar -xf *arkup*afe-*.tar.*; cd *arkup*afe-*/
   pip3 wheel -w dist --no-cache-dir --no-build-isolation --no-deps $PWD
   pip3 install --no-index --find-links dist MarkupSafe
-  cd "$S"; rm -rf MarkupSafe-*/
+  cd "$S"; rm -rf *arkup*afe-*/
 }
 
 pkg_jinja2() {
-  cd "$S"; tar -xf Jinja2-*.tar.*; cd Jinja2-*/
+  # Use case-insensitive wildcard for lowercase PyPI tarballs
+  cd "$S"; tar -xf *inja2-*.tar.*; cd *inja2-*/
   pip3 wheel -w dist --no-cache-dir --no-build-isolation --no-deps $PWD
   pip3 install --no-index --find-links dist Jinja2
-  cd "$S"; rm -rf Jinja2-*/
+  cd "$S"; rm -rf *inja2-*/
 }
 
 pkg_systemd() {
@@ -87,7 +90,7 @@ pkg_systemd() {
   meson setup --prefix=/usr --buildtype=release -D default-dnssec=no -D firstboot=false -D install-tests=false -D ldconfig=false -D sysusers=false -D rpmmacrosdir=no -D homed=disabled -D man=disabled -D mode=release -D pamconfdir=no -D dev-kvm-mode=0660 -D nobody-group=nogroup -D sysupdate=disabled -D ukify=disabled -D docdir=/usr/share/doc/systemd-259.1 ..
   ninja
   ninja install
-  tar -xf $S/systemd-man-pages-*.tar.* --no-same-owner --strip-components=1 -C /usr/share/man
+  tar -xf $S/systemd-man-pages-*.tar.* --no-same-owner --strip-components=1 -C /usr/share/man || true
   systemd-machine-id-setup
   systemctl preset-all
   cd "$S"; rm -rf systemd-*/
@@ -147,32 +150,43 @@ pkg_e2fsprogs() {
 
 pkg_stripping() {
   echo "Stripping binaries and libraries..."
-  # Protect active libraries and binaries by copying them to /tmp, stripping them, and installing them back
-  save_usrlib="$(cd /usr/lib; ls ld-linux*[^g]) libc.so.6 libthread_db.so.1 libquadmath.so.0.0.0 libstdc++.so.6.0.34 libitm.so.1.0.0 libatomic.so.1.2.0"
+  
+  # Only add quadmath if it actually exists (it does not on ARM64)
+  save_usrlib="$(cd /usr/lib; ls ld-linux*[^g] 2>/dev/null || true) libc.so.6 libthread_db.so.1 libstdc++.so.6.0.34 libitm.so.1.0.0 libatomic.so.1.2.0"
+  if [ -f /usr/lib/libquadmath.so.0.0.0 ]; then
+      save_usrlib="$save_usrlib libquadmath.so.0.0.0"
+  fi
+
   cd /usr/lib
   for LIB in $save_usrlib; do
-      objcopy --only-keep-debug --compress-debug-sections=zstd $LIB $LIB.dbg
-      cp $LIB /tmp/$LIB
-      strip --strip-debug /tmp/$LIB
-      objcopy --add-gnu-debuglink=$LIB.dbg /tmp/$LIB
-      install -vm755 /tmp/$LIB /usr/lib
-      rm /tmp/$LIB
+      if [ -f "$LIB" ]; then
+          objcopy --only-keep-debug --compress-debug-sections=zstd $LIB $LIB.dbg
+          cp $LIB /tmp/$LIB
+          strip --strip-debug /tmp/$LIB
+          objcopy --add-gnu-debuglink=$LIB.dbg /tmp/$LIB
+          install -vm755 /tmp/$LIB /usr/lib
+          rm /tmp/$LIB
+      fi
   done
 
   online_usrbin="bash find strip"
-  online_usrlib="libbfd-2.46.0.20260210.so libsframe.so.3.0.0 libhistory.so.8.3 libncursesw.so.6.6 libm.so.6 libreadline.so.8.3 libz.so.1.3.2 libzstd.so.1.5.7 $(cd /usr/lib; find libnss*.so* -type f 2>/dev/null || echo '')"
+  online_usrlib="libbfd-2.46.0.20260210.so libsframe.so.3.0.0 libhistory.so.8.3 libncursesw.so.6.6 libm.so.6 libreadline.so.8.3 libz.so.1.3.2 libzstd.so.1.5.7 $(cd /usr/lib; find libnss*.so* -type f 2>/dev/null || true)"
+  
   for BIN in $online_usrbin; do
-      cp /usr/bin/$BIN /tmp/$BIN
-      strip --strip-debug /tmp/$BIN
-      install -vm755 /tmp/$BIN /usr/bin
-      rm /tmp/$BIN
+      if [ -f "/usr/bin/$BIN" ]; then
+          cp /usr/bin/$BIN /tmp/$BIN
+          strip --strip-debug /tmp/$BIN
+          install -vm755 /tmp/$BIN /usr/bin
+          rm /tmp/$BIN
+      fi
   done
+  
   for LIB in $online_usrlib; do
       if [ -f "/usr/lib/$LIB" ]; then
-        cp /usr/lib/$LIB /tmp/$LIB
-        strip --strip-debug /tmp/$LIB
-        install -vm755 /tmp/$LIB /usr/lib
-        rm /tmp/$LIB
+          cp /usr/lib/$LIB /tmp/$LIB
+          strip --strip-debug /tmp/$LIB
+          install -vm755 /tmp/$LIB /usr/lib
+          rm /tmp/$LIB
       fi
   done
   
@@ -190,7 +204,8 @@ pkg_stripping() {
 
 pkg_cleanup() {
   echo "Running final system cleanup..."
-  rm -rf /tmp/* || true
+  # Clean /tmp but spare our logs directory if it happens to be there
+  find /tmp -mindepth 1 -maxdepth 1 ! -name 'logs' -exec rm -rf {} + || true
   find /usr/lib /usr/libexec -name \*.la -delete || true
   find /usr -depth -name $(uname -m)-lfs-linux-gnu\* | xargs rm -rf || true
   userdel -r tester 2>/dev/null || true
@@ -219,8 +234,6 @@ for p in make patch tar texinfo vim markupsafe jinja2 systemd dbus mandb procpsn
   run_pkg "$p" || FAILED_PKGS="$FAILED_PKGS $p"
 done
 
-# Save logs to /sources so we can view them via artifacts
-cp -r $LOGS /sources/chroot-stg7-logs
 if [ -n "$FAILED_PKGS" ]; then
   echo "==> Stage 7 finished WITH FAILURES:$FAILED_PKGS"
   exit 1
