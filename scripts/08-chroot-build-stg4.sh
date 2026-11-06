@@ -135,7 +135,14 @@ pkg_readline() {
   sed -i '/MV.*old/d' Makefile.in
   sed -i '/{OLDSUFF}/c:' support/shlib-install
   sed -i 's/-Wl,-rpath,[^ ]*//' support/shobj-conf
-  sed -e '270a\' -e 'chars_avail = 1;' -e '2881\ result = -1;' -i.orig input.c
+  
+  sed -e '270a\
+else\
+  chars_avail = 1;' \
+      -e '2881 i\
+  result = -1;' \
+      -i.orig input.c
+      
   ./configure --prefix=/usr --disable-static --with-curses --docdir=/usr/share/doc/readline-8.3
   make SHLIB_LIBS="-lncursesw"
   make install
