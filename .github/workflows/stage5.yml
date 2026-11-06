@@ -27,6 +27,7 @@ jobs:
       - name: Chroot Setup & Build
         run: sudo bash scripts/10-chroot-setup-stg5.sh
       - name: Unmount & Cleanup
+        if: always()
         run: sudo bash scripts/12-unmount-stg5.sh
       - name: Pack
         run: sudo tar -C $LFS --exclude=./sources -I 'zstd -T0 -12' -cf stage5.tar.zst .
