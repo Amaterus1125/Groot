@@ -41,7 +41,7 @@ sudo chown $(id -u):$(id -g) $LFS $LFS/sources
 
 Since rebuilding takes hours, we can easily repair the permissions of your existing `stage7.tar.zst` directly on your Arch Linux host using a bash script.
 
-### 1. Create the Repair Script
+### 1. Create the Repair Script - The Fix-perms.sh file
 Save the following code as `Fix-perms.sh` in the same folder you have the stage7 tarball , this will create a new tar file named stage7-fixed:
 
 ```bash
