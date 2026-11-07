@@ -42,46 +42,44 @@ sudo chown $(id -u):$(id -g) $LFS $LFS/sources
 Since rebuilding takes hours, we can easily repair the permissions of your existing `stage7.tar.zst` directly on your Arch Linux host using a bash script.
 
 ### 1. Create the Repair Script
-Save the following code as `fix-perms.sh` in your Documents folder:
+Save the following code as `Fix-perms.sh` in the same folder you have the stage7 tarball , this will create a new tar file named stage7-fixed:
 
 ```bash
 #!/bin/bash
-# fix-perms.sh - Repairs LFS rootfs permissions
+# Repair ownership and setuid/setgid bits lost to the workflow's recursive chown.
+# Usage: sudo bash fix-perms.sh /path/to/extracted/lfsroot
+# Extract first with:  sudo tar --numeric-owner --zstd -xpf stage7.tar.zst -C lfsroot
+set -euo pipefail
+R=${1:?usage: sudo bash fix-perms.sh /path/to/lfsroot}
+[ "$(id -u)" -eq 0 ] || { echo "run as root"; exit 1; }
 
-TARGET=$1
-if [ -z "$TARGET" ]; then
-    echo "Usage: sudo bash $0 <lfs-root-dir>"
-    exit 1
-fi
+# the runner's uid, read from a file the build left behind
+RUID=$(stat -c %u "$R/usr/bin/passwd")
+[ "$RUID" -ne 0 ] || { echo "passwd is already root-owned; nothing to do"; exit 0; }
+echo "runner uid/gid in the archive: $RUID"
 
-# Find the UID of the 'runner' user (usually 1001 on GitHub Actions)
-# We pull it by checking who owns the /sources directory, which is guaranteed to be the runner.
-RUNNER_UID=$(stat -c '%u' "$TARGET/sources")
+# 1. everything the runner owns goes back to root (other owners and groups stay)
+chown -R --from="$RUID:$RUID" 0:0 "$R"
+chown -R --from="$RUID" 0 "$R"
+chown -R --from=":$RUID" :0 "$R"
 
-echo "==> Resetting ownership from runner (UID $RUNNER_UID) to root..."
-find "$TARGET" -user "$RUNNER_UID" -exec chown 0:0 {} +
-
-echo "==> Restoring setuid bits (4755)..."
-# Shadow and util-linux programs requiring setuid
-SETUID_PROGS="su passwd chage chfn chsh expiry gpasswd newgrp newuidmap newgidmap mount umount"
-for prog in $SETUID_PROGS; do
-    if [ -f "$TARGET/usr/bin/$prog" ]; then
-        chmod 4755 "$TARGET/usr/bin/$prog"
-        echo "  Set setuid on /usr/bin/$prog"
-    fi
+# 2. shadow's setuid-root programs
+for f in chage chfn chsh expiry gpasswd newgrp passwd su newuidmap newgidmap; do
+  [ -e "$R/usr/bin/$f" ] && chmod 4755 "$R/usr/bin/$f" && echo "setuid  $f"
 done
 
-echo "==> Restoring setgid-tty bits (2755)..."
-for prog in write wall; do
-    if [ -f "$TARGET/usr/bin/$prog" ]; then
-        chmod 2755 "$TARGET/usr/bin/$prog"
-        echo "  Set setgid-tty on /usr/bin/$prog"
-    fi
+# 3. util-linux's mount/umount (setuid) and write/wall (setgid tty, gid 5)
+for f in mount umount; do
+  [ -e "$R/usr/bin/$f" ] && chmod 4755 "$R/usr/bin/$f" && echo "setuid  $f"
+done
+for f in write wall; do
+  [ -e "$R/usr/bin/$f" ] && chown 0:5 "$R/usr/bin/$f" && chmod 2755 "$R/usr/bin/$f" && echo "setgid  $f"
 done
 
-echo "==> Verifying..."
-REMAINING=$(find "$TARGET" -user "$RUNNER_UID" | wc -l)
-echo "Files still owned by runner ($RUNNER_UID): $REMAINING (Should be 0)"
+echo "--- setuid/setgid files now:"
+find "$R/usr" -xdev -type f -perm /6000 -printf '%M %u:%g %p\n'
+echo "--- files still owned by uid $RUID (expect 0):"
+find "$R" -xdev \( -uid "$RUID" -o -gid "$RUID" \) | wc -l
 ```
 
 ### 2. Extract, Repair, and Repack
@@ -101,7 +99,7 @@ sudo bash fix-perms.sh lfsroot
 sudo tar --numeric-owner -C lfsroot -I 'zstd -T0 -12' -cpf stage7-fixed.tar.zst .
 ```
 
-*Note on limitations:* The `fix-perms.sh` script hardcodes the list of `setuid` programs based on standard Shadow and Util-linux installations. If you add additional packages in the future that require `setuid` (e.g., `sudo`), you will need to add them to the script.
+*Note on limitations:* The `Fix-perms.sh` script hardcodes the list of `setuid` programs based on standard Shadow and Util-linux installations. If you add additional packages in the future that require `setuid` (e.g., `sudo`), you will need to add them to the script.
 
 ---
 
