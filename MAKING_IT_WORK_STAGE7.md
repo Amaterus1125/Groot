@@ -384,8 +384,29 @@ Keep `stage7-fixed.tar.zst`.
   fixed, every new stage will damage setuid bits again. Replace
   `sudo chown -R $(id -u):$(id -g) $LFS` with
   `sudo chown $(id -u):$(id -g) $LFS $LFS/sources`.
-- Stripped binaries and the removed cross toolchain cannot be undone. Keep
-  an earlier stage tarball until you are satisfied with the final one.
+- Stage 7's cleanup removed the cross toolchain and temporary files, which
+  cannot be undone. Keep an earlier stage tarball until you are satisfied with
+  the final one. Note that `file /usr/bin/bash` reports **not stripped**, so
+  debug symbols were not removed from at least that binary; the system is
+  larger than a fully stripped one would be.
+
+### Proof output from the tested system
+
+Run inside the proot system:
+
+```
+$ uname -m; ldd --version | head -1; gcc --version | head -1; file /usr/bin/bash
+aarch64
+ldd (GNU libc) 2.43
+gcc (GCC) 15.2.0
+/usr/bin/bash: ELF 64-bit LSB pie executable, ARM aarch64, version 1 (SYSV),
+dynamically linked, interpreter /lib/ld-linux-aarch64.so.1, for GNU/Linux 5.4.0,
+not stripped
+```
+
+The "for GNU/Linux 5.4.0" part is the minimum kernel version the system's
+glibc was built for (`--enable-kernel=5.4`), so a real kernel under it must
+be 5.4 or newer.
 
 ---
 
