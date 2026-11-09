@@ -1,0 +1,61 @@
+name: stage9
+on: workflow_dispatch
+jobs:
+  build:
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 340
+    env:
+      LFS: /mnt/lfs
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Free disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/lib/android
+          df -h /
+      - name: Host setup
+        run: bash scripts/00-host-setup.sh
+      - name: Restore stage8
+        run: |
+          gh release download stage8 -p stage8.tar.zst
+          # keep the numeric owners from the archive; fix-perms does nothing if they are already correct
+          sudo tar --numeric-owner --zstd -xpf stage8.tar.zst -C $LFS
+          rm stage8.tar.zst
+          sudo bash scripts/fix-perms.sh $LFS
+          mkdir -p logs
+          sudo mkdir -p $LFS/sources
+          sudo chown $(id -u):$(id -g) $LFS/sources
+      - name: Download stage 9 sources
+        run: bash scripts/23-sources-stg9.sh
+      - name: Chroot Setup & Build
+        run: sudo bash scripts/24-chroot-setup-stg9.sh
+      - name: Unmount & Cleanup
+        if: always()
+        run: sudo bash scripts/26-unmount-stg9.sh
+      - name: Verify
+        run: |
+          for f in passwd su mount; do
+            got=$(sudo stat -c '%a %u' $LFS/usr/bin/$f)
+            [ "$got" = "4755 0" ] || { echo "bad permissions on $f: $got"; exit 1; }
+          done
+          missing=""
+          for f in tmux nano wget rsync bsdtar unzip tree htop which; do
+            [ -e $LFS/usr/bin/$f ] || missing="$missing $f"
+          done
+          [ -z "$missing" ] || { echo "missing programs:$missing"; exit 1; }
+          if sudo find $LFS/etc/ssh -name 'ssh_host_*' 2>/dev/null | grep -q .; then
+            echo "SSH host keys found in the image"; exit 1
+          fi
+          left=$(sudo find $LFS -xdev -path $LFS/sources -prune -o -uid $(id -u) -print | head -n 5)
+          [ -z "$left" ] || { echo "files still owned by the runner:"; echo "$left"; exit 1; }
+          echo "checks passed"
+      - name: Pack
+        run: |
+          sudo tar --numeric-owner -C $LFS --exclude=./sources -I 'zstd -T0 -12' -cpf stage9.tar.zst .
+          ls -lh stage9.tar.zst
+          sha256sum stage9.tar.zst
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with: { name: stage9-logs, path: logs/ }
+      - uses: softprops/action-gh-release@v2
+        with: { tag_name: stage9, files: stage9.tar.zst }
