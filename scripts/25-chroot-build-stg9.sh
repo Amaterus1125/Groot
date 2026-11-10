@@ -54,9 +54,10 @@ pkg_wget() {
 }
 
 # Client use only (no rsync daemon user or unit). popt is not installed, so the bundled copy is used.
+# libidn2 is not installed either, so IDN (internationalized host name) support is disabled.
 pkg_rsync() {
   cd "$S"; tar -xf rsync-*.tar.gz; cd rsync-*/
-  ./configure --prefix=/usr --disable-xxhash --without-included-zlib
+  ./configure --prefix=/usr --disable-xxhash --without-included-zlib --disable-idn
   make
   make install
   rsync --version | sed -n 1p
