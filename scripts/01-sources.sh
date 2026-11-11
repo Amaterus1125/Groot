@@ -1,11 +1,11 @@
 #!/bin/bash
 set -uo pipefail
 cd $LFS/sources
-BASE=https://www.linuxfromscratch.org/lfs/downloads/13.0-systemd
+BASE=https://www.linuxfromscratch.org/lfs/downloads/13.1-systemd
 
 wget --tries=3 --timeout=30 $BASE/wget-list -O wget-list || { echo "FAILED: wget-list"; exit 1; }
 wget --tries=3 --timeout=30 $BASE/md5sums -O md5sums   || { echo "FAILED: md5sums"; exit 1; }
-grep -q 'linux-6.18.10' wget-list || { echo "wrong LFS version"; exit 1; }
+grep -q 'linux-7.1.8' wget-list || { echo "wrong LFS version"; exit 1; }
 
 # Remove documentation files from the list so they don't break the build
 sed -i '/-html\.tar/d' wget-list
