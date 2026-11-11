@@ -494,7 +494,7 @@ system from source using that host's tools, then the new system no longer depend
 
 <br>
 
-**Built by hand, compiled by robots, tested on a laptop. 🛠️**
+**Built by hand, compiled by Github Actions, tested on a Laptop. 🛠️**
 
 *If this helped you, a ⭐ on the repo is the best thank-you.*
 
