@@ -10,7 +10,10 @@ echo "http://mirrors.kernel.org/ubuntu/" | sudo tee /etc/apt/apt-mirrors.txt > /
 sudo apt-get update
 sudo apt-get install -y build-essential bison flex texinfo gawk m4 zstd wget
 sudo ln -sf bash /bin/sh
-sudo mkdir -p $LFS/sources $LFS/tools $LFS/usr/bin $LFS/usr/lib $LFS/usr/sbin $LFS/etc $LFS/var
+
+# ADDED $LFS/lib64 here for x86_64 compatibility
+sudo mkdir -p $LFS/sources $LFS/tools $LFS/usr/bin $LFS/usr/lib $LFS/usr/sbin $LFS/etc $LFS/var $LFS/lib64
+
 for i in bin lib sbin; do sudo ln -sfn usr/$i $LFS/$i; done
 sudo chown -R "$USER" $LFS
 mkdir -p "$GITHUB_WORKSPACE/logs"
