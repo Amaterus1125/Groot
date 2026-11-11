@@ -1,8 +1,11 @@
 #!/bin/bash
 set -euo pipefail
 
-# Overwrite the broken Azure mirror list with the main Ubuntu archive
-echo "http://archive.ubuntu.com/ubuntu/" | sudo tee /etc/apt/apt-mirrors.txt > /dev/null
+# Force apt to use IPv4 to bypass GitHub Actions DNS timeouts
+echo 'Acquire::ForceIPv4 "true";' | sudo tee /etc/apt/apt.conf.d/99force-ipv4 > /dev/null
+
+# Use the highly reliable Kernel.org mirror
+echo "http://mirrors.kernel.org/ubuntu/" | sudo tee /etc/apt/apt-mirrors.txt > /dev/null
 
 sudo apt-get update
 sudo apt-get install -y build-essential bison flex texinfo gawk m4 zstd wget
