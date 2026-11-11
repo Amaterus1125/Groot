@@ -1,5 +1,5 @@
 #!/bin/bash
-# LFS 13.1-systemd, chapter 5: cross toolchain, built on a native aarch64 host
+# LFS 13.1-systemd, chapter 5: cross toolchain, built on a native x86_64 host
 set -euo pipefail
 
 : "${LFS:?LFS not set}"
@@ -40,12 +40,6 @@ pkg_gcc() {
   case $(uname -m) in
     x86_64)
       sed -e '/m64=/s/lib64/lib/' -i.orig gcc/config/i386/t-linux64 ;;
-    aarch64)   # NOT in the book text (it covers x86_64 only): use "lib" instead of "lib64"
-      test -f gcc/config/aarch64/t-aarch64-linux
-      sed -e '/lp64=/s/lib64/lib/' -i.orig gcc/config/aarch64/t-aarch64-linux
-      if cmp -s gcc/config/aarch64/t-aarch64-linux gcc/config/aarch64/t-aarch64-linux.orig; then
-        echo "aarch64 lib64 sed changed nothing: check gcc/config/aarch64/t-aarch64-linux"; exit 1
-      fi ;;
   esac
   mkdir -v build; cd build
   ../configure \
@@ -93,8 +87,6 @@ pkg_glibc() {
     x86_64)
       ln -sfv ../lib/ld-linux-x86-64.so.2 $LFS/lib64
       ln -sfv ../lib/ld-linux-x86-64.so.2 $LFS/lib64/ld-lsb-x86-64.so.3 ;;
-    aarch64)   # NOT in the book text: LSB compliance link only; the loader lives in /lib
-      ln -sfv ld-linux-aarch64.so.1 $LFS/lib/ld-lsb-aarch64.so.3 ;;
   esac
   patch -Np1 -i ../glibc-2.44-upstream_fixes-1.patch
   patch -Np1 -i ../glibc-fhs-1.patch
@@ -113,7 +105,7 @@ pkg_glibc() {
   # sanity checks from the book
   echo 'int main(){}' | $LFS_TGT-gcc -x c - -v -Wl,--verbose &> dummy.log
   readelf -l a.out | grep ': /lib' | tee interp.txt
-  grep -q 'ld-linux-aarch64.so.1' interp.txt || [ "$(uname -m)" != aarch64 ]
+  grep -q 'ld-linux-x86-64.so.2' interp.txt || [ "$(uname -m)" != x86_64 ]
   ! grep -q "$LFS" interp.txt
   grep -E -o "$LFS/lib.*/S?crt[1in].*succeeded" dummy.log
   grep -B3 "^ $LFS/usr/include" dummy.log
