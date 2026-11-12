@@ -35,6 +35,10 @@ step() {
 }
 
 build_m4() {
+  cat > $LFS/usr/share/config.site << EOF
+ac_cv_func_posix_spawn_file_actions_addchdir=yes
+ac_cv_func_posix_spawn_file_actions_addfchdir=yes
+EOF
   ./configure --prefix=/usr --host=$LFS_TGT --build=$(build-aux/config.guess)
   make
   make DESTDIR=$LFS install
@@ -94,7 +98,7 @@ build_coreutils() {
 build_diffutils() {
   ./configure --prefix=/usr   \
               --host=$LFS_TGT \
-              gl_cv_func_strcasecmp_works=y \
+              gl_cv_func_strcasecmp_works=yes \
               --build=$(./build-aux/config.guess)
   make
   make DESTDIR=$LFS install
@@ -219,7 +223,7 @@ build_gcc() {
   mv -v mpfr-* mpfr
   tar -xf ../gmp-*.tar.xz
   mv -v gmp-* gmp
-  tar -xf ../mpc-*.tar.gz
+  tar -xf ../mpc-*.tar.xz
   mv -v mpc-* mpc
 
   # AMD x86_64 specific library configuration
@@ -252,7 +256,7 @@ build_gcc() {
       --disable-libssp                               \
       --disable-libvtv                               \
       --enable-languages=c,c++                       \
-      CXX_FOR_TARGET="$LFS_TGT-gcc-nostdinc++"       \
+      CXX_FOR_TARGET="$LFS_TGT-gcc -nostdinc++"      \
       LDFLAGS_FOR_TARGET=-L$PWD/$LFS_TGT/libgcc      \
       target_configargs=gcc_cv_target_thread_file=posix
   make
