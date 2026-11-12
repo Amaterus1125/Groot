@@ -25,6 +25,7 @@ pkg_libxcrypt() {
 
 pkg_shadow() {
   cd "$S"; tar -xf shadow-*.tar.*; cd shadow-*/
+  # drop the pages that man-pages already provides
   find man -name Makefile.in -exec sed -i -E \
     's#(man[0-9]/)?groups\.1 ##; s#(man[0-9]/)?getspnam\.3 ##; s#(man[0-9]/)?passwd\.5 ##' {} \;
   sed -e 's:#ENCRYPT_METHOD SHA512:ENCRYPT_METHOD YESCRYPT:' \
@@ -180,11 +181,11 @@ pkg_expat() {
 
 pkg_inetutils() {
   cd "$S"; tar -xf inetutils-*.tar.*; cd inetutils-*/
-  sed -i 's/def HAVE_TERMCAP_TGETENT/1/' telnet/telnet.c
+  sed -i 's/def HAVE_TERMCAP_TGETENT/ 1/' telnet/telnet.c
   ./configure --prefix=/usr --bindir=/usr/bin --localstatedir=/var --disable-logger --disable-whois --disable-rcp --disable-rexec --disable-rlogin --disable-rsh --disable-servers
-  make -j1
+  make
   make install
-  mv -v /usr/{s,}bin/ifconfig
+  mv -v /usr/bin/ifconfig /usr/sbin/ifconfig
   cd "$S"; rm -rf inetutils-*/
 }
 
