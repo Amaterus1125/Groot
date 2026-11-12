@@ -58,7 +58,6 @@ pkg_gcc() {
       --disable-libatomic \
       --disable-libgomp \
       --disable-libquadmath \
-      --disable-libsanitizer \
       --disable-libssp \
       --disable-libvtv \
       --disable-libstdcxx \
