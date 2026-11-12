@@ -17,7 +17,7 @@ jobs:
         run: bash scripts/00-host-setup.sh
       - name: Restore stage2
         run: |
-          gh release download stage2 -p stage2.tar.zst
+          gh release download v131-stage2 -p stage2.tar.zst
           sudo tar --zstd -xpf stage2.tar.zst -C $LFS
           sudo chown -R $(id -u):$(id -g) $LFS
           rm stage2.tar.zst
