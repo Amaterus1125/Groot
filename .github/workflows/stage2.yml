@@ -2,7 +2,7 @@ name: stage2
 on: workflow_dispatch
 jobs:
   build:
-    runs-on: ubuntu-24.04-arm
+    runs-on: ubuntu-24.04
     timeout-minutes: 340
     env:
       LFS: /mnt/lfs
@@ -13,7 +13,7 @@ jobs:
         run: bash scripts/00-host-setup.sh
       - name: Restore stage1
         run: |
-          gh release download stage1 -p stage1.tar.zst
+          gh release download v131-stage1 -p stage1.tar.zst
           sudo tar --zstd -xpf stage1.tar.zst -C $LFS
           sudo chown -R $(id -u):$(id -g) $LFS
           rm stage1.tar.zst
