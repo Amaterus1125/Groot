@@ -25,7 +25,6 @@ pkg_libxcrypt() {
 
 pkg_shadow() {
   cd "$S"; tar -xf shadow-*.tar.*; cd shadow-*/
-  # drop the pages that man-pages already provides
   find man -name Makefile.in -exec sed -i -E \
     's#(man[0-9]/)?groups\.1 ##; s#(man[0-9]/)?getspnam\.3 ##; s#(man[0-9]/)?passwd\.5 ##' {} \;
   sed -e 's:#ENCRYPT_METHOD SHA512:ENCRYPT_METHOD YESCRYPT:' \
@@ -43,6 +42,17 @@ pkg_shadow() {
   useradd -D --gid 999
   echo "root:root" | chpasswd
   cd "$S"; rm -rf shadow-*/
+}
+
+pkg_gawk() {
+  cd "$S"; tar -xf gawk-*.tar.*; cd gawk-*/
+  sed -i 's/extras//' Makefile.in
+  ./configure --prefix=/usr
+  make
+  rm -f /usr/bin/gawk-5.4.1
+  make install
+  ln -sfv gawk.1 /usr/share/man/man1/awk.1
+  cd "$S"; rm -rf gawk-*/
 }
 
 pkg_gcc() {
@@ -254,7 +264,7 @@ pkg_libffi() {
   cd "$S"; rm -rf libffi-*/
 }
 
-export -f pkg_libcap pkg_libxcrypt pkg_shadow pkg_gcc pkg_ncurses pkg_sed pkg_psmisc pkg_gettext pkg_bison pkg_grep pkg_bash pkg_libtool pkg_gdbm pkg_gperf pkg_expat pkg_inetutils pkg_less pkg_perl pkg_autoconf pkg_automake pkg_openssl pkg_libelf pkg_libffi
+export -f pkg_libcap pkg_libxcrypt pkg_shadow pkg_gawk pkg_gcc pkg_ncurses pkg_sed pkg_psmisc pkg_gettext pkg_bison pkg_grep pkg_bash pkg_libtool pkg_gdbm pkg_gperf pkg_expat pkg_inetutils pkg_less pkg_perl pkg_autoconf pkg_automake pkg_openssl pkg_libelf pkg_libffi
 
 run_pkg() {
   echo "==> Building $1..."
@@ -271,7 +281,7 @@ run_pkg() {
 }
 
 FAILED_PKGS=""
-for p in libcap libxcrypt shadow gcc ncurses sed psmisc gettext bison grep bash libtool gdbm gperf expat inetutils less perl autoconf automake openssl libelf libffi; do
+for p in libcap libxcrypt shadow gawk gcc ncurses sed psmisc gettext bison grep bash libtool gdbm gperf expat inetutils less perl autoconf automake openssl libelf libffi; do
   run_pkg "$p" || FAILED_PKGS="$FAILED_PKGS $p"
 done
 
