@@ -114,15 +114,34 @@ pkg_perl() {
     -D prefix=/usr \
     -D vendorprefix=/usr \
     -D useshrplib \
-    -D privlib=/usr/lib/perl5/5.42/core_perl \
-    -D archlib=/usr/lib/perl5/5.42/core_perl \
-    -D sitelib=/usr/lib/perl5/5.42/site_perl \
-    -D sitearch=/usr/lib/perl5/5.42/site_perl \
-    -D vendorlib=/usr/lib/perl5/5.42/vendor_perl \
-    -D vendorarch=/usr/lib/perl5/5.42/vendor_perl
+    -D privlib=/usr/lib/perl5/5.44/core_perl \
+    -D archlib=/usr/lib/perl5/5.44/core_perl \
+    -D sitelib=/usr/lib/perl5/5.44/site_perl \
+    -D sitearch=/usr/lib/perl5/5.44/site_perl \
+    -D vendorlib=/usr/lib/perl5/5.44/vendor_perl \
+    -D vendorarch=/usr/lib/perl5/5.44/vendor_perl
   make
   make install
   cd "$S"; rm -rf perl-*/
+}
+
+pkg_zlib() {
+  cd "$S"; tar -xf zlib-*.tar.*; cd zlib-*/
+  ./configure --prefix=/usr
+  make
+  make install
+  rm -fv /usr/lib/libz.a
+  cd "$S"; rm -rf zlib-*/
+}
+
+pkg_mpdecimal() {
+  cd "$S"; tar -xf mpdecimal-*.tar.*; cd mpdecimal-*/
+  ./configure --prefix=/usr \
+    --disable-static \
+    --docdir=/usr/share/doc/mpdecimal-4.0.1
+  make
+  make install
+  cd "$S"; rm -rf mpdecimal-*/
 }
 
 pkg_python() {
@@ -160,13 +179,13 @@ pkg_utillinux() {
     --disable-liblastlog2 \
     --without-python \
     ADJTIME_PATH=/var/lib/hwclock/adjtime \
-    --docdir=/usr/share/doc/util-linux-2.41.3
+    --docdir=/usr/share/doc/util-linux-2.42.2
   make
   make install
   cd "$S"; rm -rf util-linux-*/
 }
 
-export -f pkg_gettext pkg_bison pkg_perl pkg_python pkg_texinfo pkg_utillinux
+export -f pkg_gettext pkg_bison pkg_perl pkg_zlib pkg_mpdecimal pkg_python pkg_texinfo pkg_utillinux
 
 run_pkg() {
   echo "==> $1"
@@ -182,7 +201,7 @@ run_pkg() {
   echo "ok: $1"
 }
 
-for p in gettext bison perl python texinfo utillinux; do
+for p in gettext bison perl zlib mpdecimal python texinfo utillinux; do
   run_pkg "$p"
 done
 
