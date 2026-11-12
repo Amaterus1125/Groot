@@ -35,29 +35,29 @@ EOF
 
 pkg_flitcore() {
   cd "$S"; tar -xf flit_core-*.tar.*; cd flit_core-*/
-  pip3 wheel -w dist --no-cache-dir --no-build-isolation --no-deps $PWD
-  pip3 install --no-index --find-links dist flit_core
+  pip3.14 wheel -w dist --no-cache-dir --no-build-isolation --no-deps $PWD
+  pip3.14 install --no-index --find-links dist flit_core
   cd "$S"; rm -rf flit_core-*/
 }
 
 pkg_packaging() {
   cd "$S"; tar -xf packaging-*.tar.*; cd packaging-*/
-  pip3 wheel -w dist --no-cache-dir --no-build-isolation --no-deps $PWD
-  pip3 install --no-index --find-links dist packaging
+  pip3.14 wheel -w dist --no-cache-dir --no-build-isolation --no-deps $PWD
+  pip3.14 install --no-index --find-links dist packaging
   cd "$S"; rm -rf packaging-*/
 }
 
 pkg_wheel() {
   cd "$S"; tar -xf wheel-*.tar.*; cd wheel-*/
-  pip3 wheel -w dist --no-cache-dir --no-build-isolation --no-deps $PWD
-  pip3 install --no-index --find-links dist wheel
+  pip3.14 wheel -w dist --no-cache-dir --no-build-isolation --no-deps $PWD
+  pip3.14 install --no-index --find-links dist wheel
   cd "$S"; rm -rf wheel-*/
 }
 
 pkg_setuptools() {
   cd "$S"; tar -xf setuptools-*.tar.*; cd setuptools-*/
-  pip3 wheel -w dist --no-cache-dir --no-build-isolation --no-deps $PWD
-  pip3 install --no-index --find-links dist setuptools
+  pip3.14 wheel -w dist --no-cache-dir --no-build-isolation --no-deps $PWD
+  pip3.14 install --no-index --find-links dist setuptools
   cd "$S"; rm -rf setuptools-*/
 }
 
@@ -73,8 +73,8 @@ pkg_ninja() {
 
 pkg_meson() {
   cd "$S"; tar -xf meson-*.tar.*; cd meson-*/
-  pip3 wheel -w dist --no-cache-dir --no-build-isolation --no-deps $PWD
-  pip3 install --no-index --find-links dist meson
+  pip3.14 wheel -w dist --no-cache-dir --no-build-isolation --no-deps $PWD
+  pip3.14 install --no-index --find-links dist meson
   install -vDm644 data/shell-completions/bash/meson /usr/share/bash-completion/completions/meson
   install -vDm644 data/shell-completions/zsh/_meson /usr/share/zsh/site-functions/_meson
   cd "$S"; rm -rf meson-*/
