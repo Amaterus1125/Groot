@@ -1,5 +1,5 @@
 #!/bin/bash
-# LFS 13.0-systemd, chapter 6: cross compiling temporary tools (6.2 - 6.18)
+# LFS 13.1-systemd, chapter 6: cross compiling temporary tools (6.2 - 6.18)
 set -euo pipefail
 
 LOGS=$GITHUB_WORKSPACE/logs
@@ -184,13 +184,17 @@ build_xz() {
               --host=$LFS_TGT                   \
               --build=$(build-aux/config.guess) \
               --disable-static                  \
-              --docdir=/usr/share/doc/xz-5.8.2
+              --docdir=/usr/share/doc/xz-5.8.3
   make
   make DESTDIR=$LFS install
   rm -v $LFS/usr/lib/liblzma.la
 }
 
 build_binutils() {
+  # the book edits a fixed line of ltmain.sh; fail clearly if that line moved in this release
+  sed -n '6031p' ltmain.sh | grep -q '\$add_dir' || {
+    echo "ltmain.sh line 6031 has no \$add_dir: check the book (6.17 Binutils) for the new line number"
+    grep -n '\$add_dir' ltmain.sh; exit 1; }
   sed '6031s/$add_dir//' -i ltmain.sh
   mkdir -v build
   cd build
@@ -207,7 +211,7 @@ build_binutils() {
       --enable-default-hash-style=gnu
   make
   make DESTDIR=$LFS install
-  rm -v $LFS/usr/lib/lib{bfd,ctf,ctf-nobfd,opcodes,sframe}.{a,la}
+  rm -fv $LFS/usr/lib/lib{bfd,ctf,ctf-nobfd,opcodes,sframe}.{a,la}
 }
 
 build_gcc() {
@@ -218,18 +222,10 @@ build_gcc() {
   tar -xf ../mpc-*.tar.gz
   mv -v mpc-* mpc
 
-  # The book only covers x86_64 here. The aarch64 line is the equivalent edit
-  # and must match what the chapter 5 (pass 1) script did.
+  # AMD x86_64 specific library configuration
   case $(uname -m) in
     x86_64)
       sed -e '/m64=/s/lib64/lib/' -i.orig gcc/config/i386/t-linux64
-    ;;
-    aarch64)
-      sed -e '/lp64=/s/lib64/lib/' -i.orig gcc/config/aarch64/t-aarch64-linux
-      if cmp -s gcc/config/aarch64/t-aarch64-linux gcc/config/aarch64/t-aarch64-linux.orig; then
-        echo "aarch64 lib64 sed changed nothing: check gcc/config/aarch64/t-aarch64-linux"
-        exit 1
-      fi
     ;;
   esac
 
@@ -246,6 +242,7 @@ build_gcc() {
       --with-build-sysroot=$LFS                      \
       --enable-default-pie                           \
       --enable-default-ssp                           \
+      --disable-fixincludes                          \
       --disable-nls                                  \
       --disable-multilib                             \
       --disable-libatomic                            \
@@ -255,7 +252,9 @@ build_gcc() {
       --disable-libssp                               \
       --disable-libvtv                               \
       --enable-languages=c,c++                       \
-      LDFLAGS_FOR_TARGET=-L$PWD/$LFS_TGT/libgcc
+      CXX_FOR_TARGET="$LFS_TGT-gcc-nostdinc++"       \
+      LDFLAGS_FOR_TARGET=-L$PWD/$LFS_TGT/libgcc      \
+      target_configargs=gcc_cv_target_thread_file=posix
   make
   make DESTDIR=$LFS install
   ln -sv gcc $LFS/usr/bin/cc
