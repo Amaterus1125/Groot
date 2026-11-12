@@ -19,7 +19,6 @@ cd "$LFS/sources"
 CUR=""
 trap 'rc=$?; if [ $rc -ne 0 ] && [ -n "$CUR" ]; then echo "FAILED: $CUR"; tail -n 60 "$LOGS/$CUR.log"; fi' EXIT
 
-# step <name>: unpack <name>-<version>.tar.*, run build_<name> inside it, clean up
 step() {
   CUR=$1
   local tarball dir
@@ -195,7 +194,6 @@ build_xz() {
 }
 
 build_binutils() {
-  # the book edits a fixed line of ltmain.sh; fail clearly if that line moved in this release
   sed -n '6031p' ltmain.sh | grep -q '\$add_dir' || {
     echo "ltmain.sh line 6031 has no \$add_dir: check the book (6.17 Binutils) for the new line number"
     grep -n '\$add_dir' ltmain.sh; exit 1; }
@@ -246,7 +244,6 @@ build_gcc() {
       --with-build-sysroot=$LFS                      \
       --enable-default-pie                           \
       --enable-default-ssp                           \
-      --disable-fixincludes                          \
       --disable-nls                                  \
       --disable-multilib                             \
       --disable-libatomic                            \
@@ -256,9 +253,7 @@ build_gcc() {
       --disable-libssp                               \
       --disable-libvtv                               \
       --enable-languages=c,c++                       \
-      CXX_FOR_TARGET="$LFS_TGT-gcc -nostdinc++"      \
-      LDFLAGS_FOR_TARGET=-L$PWD/$LFS_TGT/libgcc      \
-      target_configargs=gcc_cv_target_thread_file=posix
+      LDFLAGS_FOR_TARGET=-L$PWD/$LFS_TGT/libgcc
   make
   make DESTDIR=$LFS install
   ln -sv gcc $LFS/usr/bin/cc
