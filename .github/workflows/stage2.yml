@@ -29,4 +29,4 @@ jobs:
         if: always()
         with: { name: stage2-logs, path: logs/ }
       - uses: softprops/action-gh-release@v2
-        with: { tag_name: stage2, files: stage2.tar.zst }
+        with: { tag_name: v131-stage2, files: stage1.tar.zst }
