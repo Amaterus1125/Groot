@@ -3,7 +3,6 @@ set -euo pipefail
 export LOGS="/tmp/logs"
 mkdir -p "$LOGS"
 export S="/sources"
-export BLD_TGT="$(uname -m)-unknown-linux-gnu"
 
 # --- Build Functions ---
 
@@ -12,7 +11,7 @@ pkg_sqlite() {
   # Use ls + grep to avoid matching sqlite-doc if it exists in the folder
   ls sqlite-*.tar.* | grep -v doc | xargs tar -xf
   cd sqlite-*/
-  ./configure --prefix=/usr --build=$BLD_TGT --disable-static \
+  ./configure --prefix=/usr --disable-static \
     --enable-fts4 --enable-fts5 \
     CPPFLAGS="-DSQLITE_ENABLE_COLUMN_METADATA=1 -DSQLITE_ENABLE_UNLOCK_NOTIFY=1 -DSQLITE_ENABLE_DBSTAT_VTAB=1 -DSQLITE_SECURE_DELETE=1"
   make LDFLAGS.rpath=""
@@ -22,7 +21,7 @@ pkg_sqlite() {
 
 pkg_python3() {
   cd "$S"; tar -xf Python-*.tar.*; cd Python-*/
-  ./configure --prefix=/usr --build=$BLD_TGT --enable-shared \
+  ./configure --prefix=/usr --enable-shared \
     --with-system-expat --enable-optimizations --without-static-libpython
   make
   make install
@@ -95,7 +94,7 @@ pkg_coreutils() {
   patch -Np1 -i ../coreutils-9.10-i18n-1.patch
   autoreconf -fv
   automake -a -f
-  FORCE_UNSAFE_CONFIGURE=1 ./configure --prefix=/usr --build=$BLD_TGT
+  FORCE_UNSAFE_CONFIGURE=1 ./configure --prefix=/usr
   make
   make install
   mv -v /usr/bin/chroot /usr/sbin || true
@@ -106,26 +105,15 @@ pkg_coreutils() {
 
 pkg_diffutils() {
   cd "$S"; tar -xf diffutils-*.tar.*; cd diffutils-*/
-  ./configure --prefix=/usr --build=$BLD_TGT
+  ./configure --prefix=/usr
   make
   make install
   cd "$S"; rm -rf diffutils-*/
 }
 
-pkg_gawk() {
-  cd "$S"; tar -xf gawk-*.tar.*; cd gawk-*/
-  sed -i 's/extras//' Makefile.in
-  ./configure --prefix=/usr --build=$BLD_TGT
-  make
-  rm -f /usr/bin/gawk-*
-  make install
-  ln -sfv gawk.1 /usr/share/man/man1/awk.1 || true
-  cd "$S"; rm -rf gawk-*/
-}
-
 pkg_findutils() {
   cd "$S"; tar -xf findutils-*.tar.*; cd findutils-*/
-  ./configure --prefix=/usr --build=$BLD_TGT --localstatedir=/var/lib/locate
+  ./configure --prefix=/usr --localstatedir=/var/lib/locate
   make
   make install
   cd "$S"; rm -rf findutils-*/
@@ -133,7 +121,7 @@ pkg_findutils() {
 
 pkg_groff() {
   cd "$S"; tar -xf groff-*.tar.*; cd groff-*/
-  PAGE=A4 ./configure --prefix=/usr --build=$BLD_TGT
+  PAGE=A4 ./configure --prefix=/usr
   make
   make install
   cd "$S"; rm -rf groff-*/
@@ -142,7 +130,7 @@ pkg_groff() {
 pkg_grub() {
   cd "$S"; tar -xf grub-*.tar.*; cd grub-*/
   sed -i 's/--image-base/--nonexist-linker-option/' configure
-  ./configure --prefix=/usr --build=$BLD_TGT --sysconfdir=/etc --disable-efiemu --disable-werror
+  ./configure --prefix=/usr --sysconfdir=/etc --disable-efiemu --disable-werror
   make
   make install
   cd "$S"; rm -rf grub-*/
@@ -150,7 +138,7 @@ pkg_grub() {
 
 pkg_gzip() {
   cd "$S"; tar -xf gzip-*.tar.*; cd gzip-*/
-  ./configure --prefix=/usr --build=$BLD_TGT
+  ./configure --prefix=/usr
   make
   make install
   cd "$S"; rm -rf gzip-*/
@@ -170,7 +158,7 @@ pkg_kbd() {
   patch -Np1 -i ../kbd-2.9.0-backspace-1.patch
   sed -i '/RESIZECONS_PROGS=/s/yes/no/' configure
   sed -i 's/resizecons.8 //' docs/man/man8/Makefile.in
-  ./configure --prefix=/usr --build=$BLD_TGT --disable-vlock
+  ./configure --prefix=/usr --disable-vlock
   make
   make install
   cd "$S"; rm -rf kbd-*/
@@ -178,13 +166,13 @@ pkg_kbd() {
 
 pkg_libpipeline() {
   cd "$S"; tar -xf libpipeline-*.tar.*; cd libpipeline-*/
-  ./configure --prefix=/usr --build=$BLD_TGT
+  ./configure --prefix=/usr
   make
   make install
   cd "$S"; rm -rf libpipeline-*/
 }
 
-export -f pkg_sqlite pkg_python3 pkg_flitcore pkg_packaging pkg_wheel pkg_setuptools pkg_ninja pkg_meson pkg_kmod pkg_coreutils pkg_diffutils pkg_gawk pkg_findutils pkg_groff pkg_grub pkg_gzip pkg_iproute2 pkg_kbd pkg_libpipeline
+export -f pkg_sqlite pkg_python3 pkg_flitcore pkg_packaging pkg_wheel pkg_setuptools pkg_ninja pkg_meson pkg_kmod pkg_coreutils pkg_diffutils pkg_findutils pkg_groff pkg_grub pkg_gzip pkg_iproute2 pkg_kbd pkg_libpipeline
 
 run_pkg() {
   echo "==> Building $1..."
@@ -200,13 +188,11 @@ run_pkg() {
   echo "ok: $1"
 }
 
-# The ordered list of Chapter 8 packages for Stage 6
 FAILED_PKGS=""
-for p in sqlite python3 flitcore packaging wheel setuptools ninja meson kmod coreutils diffutils gawk findutils groff grub gzip iproute2 kbd libpipeline; do
+for p in sqlite python3 flitcore packaging wheel setuptools ninja meson kmod coreutils diffutils findutils groff grub gzip iproute2 kbd libpipeline; do
   run_pkg "$p" || FAILED_PKGS="$FAILED_PKGS $p"
 done
 
-# Save logs to /sources so we can view them via artifacts
 cp -r $LOGS /sources/chroot-stg6-logs
 if [ -n "$FAILED_PKGS" ]; then
   echo "==> Stage 6 finished WITH FAILURES:$FAILED_PKGS"
