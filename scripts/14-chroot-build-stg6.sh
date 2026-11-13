@@ -8,7 +8,6 @@ export S="/sources"
 
 pkg_sqlite() {
   cd "$S"
-  # Use ls + grep to avoid matching sqlite-doc if it exists in the folder
   ls sqlite-*.tar.* | grep -v doc | xargs tar -xf
   cd sqlite-*/
   ./configure --prefix=/usr --disable-static \
@@ -22,9 +21,10 @@ pkg_sqlite() {
 pkg_python3() {
   cd "$S"; tar -xf Python-*.tar.*; cd Python-*/
   ./configure --prefix=/usr --enable-shared \
-    --with-system-expat --enable-optimizations
+    --with-system-expat --with-system-ffi --enable-optimizations
   make
   make install
+  python3 -m ensurepip --upgrade || true
   cat > /etc/pip.conf << "EOF"
 [global]
 root-user-action = ignore
@@ -35,29 +35,29 @@ EOF
 
 pkg_flitcore() {
   cd "$S"; tar -xf flit_core-*.tar.*; cd flit_core-*/
-  pip3.14 wheel -w dist --no-cache-dir --no-build-isolation --no-deps $PWD
-  pip3.14 install --no-index --find-links dist flit_core
+  python3 -m pip wheel -w dist --no-cache-dir --no-build-isolation --no-deps $PWD
+  python3 -m pip install --no-index --find-links dist flit_core
   cd "$S"; rm -rf flit_core-*/
 }
 
 pkg_packaging() {
   cd "$S"; tar -xf packaging-*.tar.*; cd packaging-*/
-  pip3.14 wheel -w dist --no-cache-dir --no-build-isolation --no-deps $PWD
-  pip3.14 install --no-index --find-links dist packaging
+  python3 -m pip wheel -w dist --no-cache-dir --no-build-isolation --no-deps $PWD
+  python3 -m pip install --no-index --find-links dist packaging
   cd "$S"; rm -rf packaging-*/
 }
 
 pkg_wheel() {
   cd "$S"; tar -xf wheel-*.tar.*; cd wheel-*/
-  pip3.14 wheel -w dist --no-cache-dir --no-build-isolation --no-deps $PWD
-  pip3.14 install --no-index --find-links dist wheel
+  python3 -m pip wheel -w dist --no-cache-dir --no-build-isolation --no-deps $PWD
+  python3 -m pip install --no-index --find-links dist wheel
   cd "$S"; rm -rf wheel-*/
 }
 
 pkg_setuptools() {
   cd "$S"; tar -xf setuptools-*.tar.*; cd setuptools-*/
-  pip3.14 wheel -w dist --no-cache-dir --no-build-isolation --no-deps $PWD
-  pip3.14 install --no-index --find-links dist setuptools
+  python3 -m pip wheel -w dist --no-cache-dir --no-build-isolation --no-deps $PWD
+  python3 -m pip install --no-index --find-links dist setuptools
   cd "$S"; rm -rf setuptools-*/
 }
 
@@ -73,8 +73,8 @@ pkg_ninja() {
 
 pkg_meson() {
   cd "$S"; tar -xf meson-*.tar.*; cd meson-*/
-  pip3.14 wheel -w dist --no-cache-dir --no-build-isolation --no-deps $PWD
-  pip3.14 install --no-index --find-links dist meson
+  python3 -m pip wheel -w dist --no-cache-dir --no-build-isolation --no-deps $PWD
+  python3 -m pip install --no-index --find-links dist meson
   install -vDm644 data/shell-completions/bash/meson /usr/share/bash-completion/completions/meson
   install -vDm644 data/shell-completions/zsh/_meson /usr/share/zsh/site-functions/_meson
   cd "$S"; rm -rf meson-*/
@@ -91,9 +91,11 @@ pkg_kmod() {
 
 pkg_coreutils() {
   cd "$S"; tar -xf coreutils-*.tar.*; cd coreutils-*/
-  patch -Np1 -i ../coreutils-9.10-i18n-1.patch
-  autoreconf -fv
-  automake -a -f
+  if ls ../coreutils-*-i18n-1.patch 1> /dev/null 2>&1; then
+    patch -Np1 -i ../coreutils-*-i18n-1.patch
+    autoreconf -fv
+    automake -a -f
+  fi
   FORCE_UNSAFE_CONFIGURE=1 ./configure --prefix=/usr
   make
   make install
@@ -155,7 +157,9 @@ pkg_iproute2() {
 
 pkg_kbd() {
   cd "$S"; tar -xf kbd-*.tar.*; cd kbd-*/
-  patch -Np1 -i ../kbd-2.9.0-backspace-1.patch
+  if ls ../kbd-*-backspace-1.patch 1> /dev/null 2>&1; then
+    patch -Np1 -i ../kbd-*-backspace-1.patch
+  fi
   sed -i '/RESIZECONS_PROGS=/s/yes/no/' configure
   sed -i 's/resizecons.8 //' docs/man/man8/Makefile.in
   ./configure --prefix=/usr --disable-vlock
