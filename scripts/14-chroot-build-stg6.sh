@@ -18,13 +18,26 @@ pkg_sqlite() {
   cd "$S"; rm -rf sqlite-*/
 }
 
+pkg_mpdecimal() {
+  cd "$S"; tar -xf mpdecimal-*.tar.*; cd mpdecimal-*/
+  ./configure --prefix=/usr \
+    --disable-static \
+    --docdir=/usr/share/doc/mpdecimal-4.0.1
+  make
+  make install
+  cd "$S"; rm -rf mpdecimal-*/
+}
+
 pkg_python3() {
   cd "$S"; tar -xf Python-*.tar.*; cd Python-*/
   # LFS 13.1: required so the ssl/hashlib modules build against OpenSSL 4
   ls ../Python-*-openssl_4-1.patch >/dev/null || { echo "MISSING Python openssl_4 patch in $S"; exit 1; }
   patch -Np1 -i ../Python-*-openssl_4-1.patch
-  ./configure --prefix=/usr --enable-shared \
-    --with-system-expat --with-system-ffi --enable-optimizations
+  ./configure --prefix=/usr \
+    --enable-shared \
+    --with-system-expat \
+    --enable-optimizations \
+    --without-static-libpython
   make
   make install
   # make install normally installs pip; only fall back to ensurepip if it did not,
@@ -182,7 +195,7 @@ pkg_libpipeline() {
   cd "$S"; rm -rf libpipeline-*/
 }
 
-export -f pkg_sqlite pkg_python3 pkg_flitcore pkg_packaging pkg_wheel pkg_setuptools pkg_ninja pkg_meson pkg_kmod pkg_coreutils pkg_diffutils pkg_findutils pkg_groff pkg_grub pkg_gzip pkg_iproute2 pkg_kbd pkg_libpipeline
+export -f pkg_sqlite pkg_mpdecimal pkg_python3 pkg_flitcore pkg_packaging pkg_wheel pkg_setuptools pkg_ninja pkg_meson pkg_kmod pkg_coreutils pkg_diffutils pkg_findutils pkg_groff pkg_grub pkg_gzip pkg_iproute2 pkg_kbd pkg_libpipeline
 
 run_pkg() {
   echo "==> Building $1..."
@@ -199,7 +212,7 @@ run_pkg() {
 }
 
 FAILED_PKGS=""
-for p in sqlite python3 flitcore packaging wheel setuptools ninja meson kmod coreutils diffutils findutils groff grub gzip iproute2 kbd libpipeline; do
+for p in sqlite mpdecimal python3 flitcore packaging wheel setuptools ninja meson kmod coreutils diffutils findutils groff grub gzip iproute2 kbd libpipeline; do
   run_pkg "$p" || FAILED_PKGS="$FAILED_PKGS $p"
 done
 
