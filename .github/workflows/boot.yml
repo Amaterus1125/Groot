@@ -1,0 +1,48 @@
+name: boot
+on: workflow_dispatch
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 340
+    env:
+      LFS: /mnt/lfs
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Free disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/lib/android
+          df -h /
+      - name: Host setup
+        run: bash scripts/00-host-setup.sh
+      - name: Restore stage7
+        run: |
+          gh release download v131-stage7 -p stage7.tar.zst
+          sudo tar --zstd -xpf stage7.tar.zst -C $LFS
+          rm stage7.tar.zst
+          sudo chown $(id -u):$(id -g) $LFS/sources
+          mkdir -p logs
+      - name: Download missing sources
+        run: bash scripts/01-sources.sh
+      - name: Chroot config + kernel
+        run: sudo bash scripts/30-chroot-setup-boot.sh
+      - name: Unmount & Cleanup
+        if: always()
+        run: sudo bash scripts/32-unmount-boot.sh
+      - name: Build disk image
+        run: sudo bash scripts/33-make-image.sh
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with: { name: boot-logs, path: logs/ }
+      - uses: actions/upload-artifact@v4
+        with:
+          name: boot-image
+          path: lfs-13.1-x86_64.img.zst
+          compression-level: 0
+          retention-days: 3
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v131-boot
+          files: |
+            lfs-13.1-x86_64.img.zst
+            vmlinuz-*
