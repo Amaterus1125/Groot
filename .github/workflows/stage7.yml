@@ -2,7 +2,7 @@ name: stage7
 on: workflow_dispatch
 jobs:
   build:
-    runs-on: ubuntu-24.04-arm
+    runs-on: ubuntu-24.04
     timeout-minutes: 340
     env:
       LFS: /mnt/lfs
@@ -17,7 +17,7 @@ jobs:
         run: bash scripts/00-host-setup.sh
       - name: Restore stage6
         run: |
-          gh release download stage6 -p stage6.tar.zst
+          gh release download v131-stage6 -p stage6.tar.zst
           sudo tar --zstd -xpf stage6.tar.zst -C $LFS
           sudo chown -R $(id -u):$(id -g) $LFS
           rm stage6.tar.zst
@@ -35,4 +35,4 @@ jobs:
         if: always()
         with: { name: stage7-logs, path: logs/ }
       - uses: softprops/action-gh-release@v2
-        with: { tag_name: stage7, files: stage7.tar.zst }
+        with: { tag_name: v131-stage7, files: stage7.tar.zst }
