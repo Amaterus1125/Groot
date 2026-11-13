@@ -20,11 +20,17 @@ pkg_sqlite() {
 
 pkg_python3() {
   cd "$S"; tar -xf Python-*.tar.*; cd Python-*/
+  # LFS 13.1: required so the ssl/hashlib modules build against OpenSSL 4
+  ls ../Python-*-openssl_4-1.patch >/dev/null || { echo "MISSING Python openssl_4 patch in $S"; exit 1; }
+  patch -Np1 -i ../Python-*-openssl_4-1.patch
   ./configure --prefix=/usr --enable-shared \
     --with-system-expat --with-system-ffi --enable-optimizations
   make
   make install
-  python3 -m ensurepip --upgrade || true
+  # make install normally installs pip; only fall back to ensurepip if it did not,
+  # and fail here (with the real error in the log) instead of in every later package
+  python3 -m pip --version || python3 -m ensurepip --upgrade
+  python3 -m pip --version
   cat > /etc/pip.conf << "EOF"
 [global]
 root-user-action = ignore
