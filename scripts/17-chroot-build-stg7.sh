@@ -4,13 +4,12 @@ set -euo pipefail
 export LOGS="/sources/chroot-stg7-logs"
 mkdir -p "$LOGS"
 export S="/sources"
-export BLD_TGT="$(uname -m)-unknown-linux-gnu"
 
 # --- Build Functions ---
 
 pkg_make() {
   cd "$S"; tar -xf make-*.tar.*; cd make-*/
-  ./configure --prefix=/usr --build=$BLD_TGT
+  ./configure --prefix=/usr
   make
   make install
   cd "$S"; rm -rf make-*/
@@ -18,7 +17,7 @@ pkg_make() {
 
 pkg_patch() {
   cd "$S"; tar -xf patch-*.tar.*; cd patch-*/
-  ./configure --prefix=/usr --build=$BLD_TGT
+  ./configure --prefix=/usr
   make
   make install
   cd "$S"; rm -rf patch-*/
@@ -26,7 +25,7 @@ pkg_patch() {
 
 pkg_tar() {
   cd "$S"; tar -xf tar-*.tar.*; cd tar-*/
-  FORCE_UNSAFE_CONFIGURE=1 ./configure --prefix=/usr --build=$BLD_TGT
+  FORCE_UNSAFE_CONFIGURE=1 ./configure --prefix=/usr
   make
   make install
   cd "$S"; rm -rf tar-*/
@@ -35,7 +34,7 @@ pkg_tar() {
 pkg_texinfo() {
   cd "$S"; tar -xf texinfo-*.tar.*; cd texinfo-*/
   sed 's/! $output_file eq/$output_file ne/' -i tp/Texinfo/Convert/*.pm
-  ./configure --prefix=/usr --build=$BLD_TGT
+  ./configure --prefix=/usr
   make
   make install
   cd "$S"; rm -rf texinfo-*/
@@ -44,7 +43,7 @@ pkg_texinfo() {
 pkg_vim() {
   cd "$S"; tar -xf vim-*.tar.*; cd vim-*/
   echo '#define SYS_VIMRC_FILE "/etc/vimrc"' >> src/feature.h
-  ./configure --prefix=/usr --build=$BLD_TGT
+  ./configure --prefix=/usr
   make
   make install
   ln -sv vim /usr/bin/vi || true
@@ -60,7 +59,7 @@ set backspace=2
 set mouse=
 syntax on
 if (&term == "xterm") || (&term == "putty")
-  set background=dark
+set background=dark
 endif
 "End /etc/vimrc
 EOF
@@ -70,16 +69,16 @@ EOF
 pkg_markupsafe() {
   # Use case-insensitive wildcard for lowercase PyPI tarballs
   cd "$S"; tar -xf *arkup*afe-*.tar.*; cd *arkup*afe-*/
-  pip3 wheel -w dist --no-cache-dir --no-build-isolation --no-deps $PWD
-  pip3 install --no-index --find-links dist MarkupSafe
+  python3 -m pip wheel -w dist --no-cache-dir --no-build-isolation --no-deps $PWD
+  python3 -m pip install --no-index --find-links dist MarkupSafe
   cd "$S"; rm -rf *arkup*afe-*/
 }
 
 pkg_jinja2() {
   # Use case-insensitive wildcard for lowercase PyPI tarballs
   cd "$S"; tar -xf *inja2-*.tar.*; cd *inja2-*/
-  pip3 wheel -w dist --no-cache-dir --no-build-isolation --no-deps $PWD
-  pip3 install --no-index --find-links dist Jinja2
+  python3 -m pip wheel -w dist --no-cache-dir --no-build-isolation --no-deps $PWD
+  python3 -m pip install --no-index --find-links dist Jinja2
   cd "$S"; rm -rf *inja2-*/
 }
 
@@ -108,7 +107,7 @@ pkg_dbus() {
 
 pkg_mandb() {
   cd "$S"; tar -xf man-db-*.tar.*; cd man-db-*/
-  ./configure --prefix=/usr --build=$BLD_TGT --docdir=/usr/share/doc/man-db-2.13.1 \
+  ./configure --prefix=/usr --docdir=/usr/share/doc/man-db-2.13.1 \
     --sysconfdir=/etc --disable-setuid --enable-cache-owner=bin \
     --with-browser=/usr/bin/lynx --with-vgrind=/usr/bin/vgrind --with-grap=/usr/bin/grap
   make
@@ -118,7 +117,7 @@ pkg_mandb() {
 
 pkg_procpsng() {
   cd "$S"; tar -xf procps-ng-*.tar.*; cd procps-ng-*/
-  ./configure --prefix=/usr --build=$BLD_TGT --docdir=/usr/share/doc/procps-ng-4.0.6 \
+  ./configure --prefix=/usr --docdir=/usr/share/doc/procps-ng-4.0.6 \
     --disable-static --disable-kill --enable-watch8bit --with-systemd
   make
   make install
@@ -127,7 +126,7 @@ pkg_procpsng() {
 
 pkg_utillinux() {
   cd "$S"; tar -xf util-linux-*.tar.*; cd util-linux-*/
-  ./configure --build=$BLD_TGT --bindir=/usr/bin --libdir=/usr/lib --runstatedir=/run \
+  ./configure --bindir=/usr/bin --libdir=/usr/lib --runstatedir=/run \
     --sbindir=/usr/sbin --disable-chfn-chsh --disable-login --disable-nologin \
     --disable-su --disable-setpriv --disable-runuser --disable-pylibmount \
     --disable-liblastlog2 --disable-static --without-python \
@@ -140,7 +139,7 @@ pkg_utillinux() {
 pkg_e2fsprogs() {
   cd "$S"; tar -xf e2fsprogs-*.tar.*; cd e2fsprogs-*/
   mkdir -v build; cd build
-  ../configure --prefix=/usr --build=$BLD_TGT --sysconfdir=/etc --enable-elf-shlibs \
+  ../configure --prefix=/usr --sysconfdir=/etc --enable-elf-shlibs \
     --disable-libblkid --disable-libuuid --disable-uuidd --disable-fsck
   make
   make install
@@ -151,7 +150,6 @@ pkg_e2fsprogs() {
 pkg_stripping() {
   echo "Stripping binaries and libraries..."
   
-  # Only add quadmath if it actually exists (it does not on ARM64)
   save_usrlib="$(cd /usr/lib; ls ld-linux*[^g] 2>/dev/null || true) libc.so.6 libthread_db.so.1 libstdc++.so.6.0.34 libitm.so.1.0.0 libatomic.so.1.2.0"
   if [ -f /usr/lib/libquadmath.so.0.0.0 ]; then
       save_usrlib="$save_usrlib libquadmath.so.0.0.0"
@@ -190,7 +188,6 @@ pkg_stripping() {
       fi
   done
   
-  # Strip everything else, ignoring warnings for non-binaries using '|| true'
   for i in $(find /usr/lib -type f -name \*.so* ! -name \*dbg) \
            $(find /usr/lib -type f -name \*.a) \
            $(find /usr/bin /usr/sbin /usr/libexec -type f); do
@@ -204,7 +201,6 @@ pkg_stripping() {
 
 pkg_cleanup() {
   echo "Running final system cleanup..."
-  # Clean /tmp but spare our logs directory if it happens to be there
   find /tmp -mindepth 1 -maxdepth 1 ! -name 'logs' -exec rm -rf {} + || true
   find /usr/lib /usr/libexec -name \*.la -delete || true
   find /usr -depth -name $(uname -m)-lfs-linux-gnu\* | xargs rm -rf || true
@@ -228,7 +224,6 @@ run_pkg() {
   echo "ok: $1"
 }
 
-# The ordered list of Chapter 8 packages and cleanup procedures for Stage 7
 FAILED_PKGS=""
 for p in make patch tar texinfo vim markupsafe jinja2 systemd dbus mandb procpsng utillinux e2fsprogs stripping cleanup; do
   run_pkg "$p" || FAILED_PKGS="$FAILED_PKGS $p"
