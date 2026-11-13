@@ -25,6 +25,9 @@ pkg_patch() {
 
 pkg_tar() {
   cd "$S"; tar -xf tar-*.tar.*; cd tar-*/
+  # LFS 13.1: required, tar-1.35 does not compile against acl-2.4.0 without it
+  ls ../tar-1.35-acl_fix-1.patch >/dev/null || { echo "MISSING tar acl_fix patch in $S"; exit 1; }
+  patch -Np1 -i ../tar-1.35-acl_fix-1.patch
   FORCE_UNSAFE_CONFIGURE=1 ./configure --prefix=/usr
   make
   make install
@@ -33,7 +36,7 @@ pkg_tar() {
 
 pkg_texinfo() {
   cd "$S"; tar -xf texinfo-*.tar.*; cd texinfo-*/
-  sed 's/! $output_file eq/$output_file ne/' -i tp/Texinfo/Convert/*.pm
+  sed 's/! $output_file eq/$output_file ne/' -i tp/Texinfo/Convert/*.pm || true   # Perl>=5.42 warning fix, may be unneeded in 7.3
   ./configure --prefix=/usr
   make
   make install
@@ -86,7 +89,7 @@ pkg_systemd() {
   cd "$S"; tar -xf systemd-2*.tar.*; cd systemd-*/
   sed -e 's/GROUP="render"/GROUP="video"/' -e 's/GROUP="sgx", //' -i rules.d/50-udev-default.rules.in
   mkdir -p build; cd build
-  meson setup --prefix=/usr --buildtype=release -D default-dnssec=no -D firstboot=false -D install-tests=false -D ldconfig=false -D sysusers=false -D rpmmacrosdir=no -D homed=disabled -D man=disabled -D mode=release -D pamconfdir=no -D dev-kvm-mode=0660 -D nobody-group=nogroup -D sysupdate=disabled -D ukify=disabled -D docdir=/usr/share/doc/systemd-259.1 ..
+  meson setup --prefix=/usr --buildtype=release -D default-dnssec=no -D firstboot=false -D install-tests=false -D ldconfig=false -D sysusers=false -D rpmmacrosdir=no -D homed=disabled -D man=disabled -D mode=release -D pamconfdir=no -D dev-kvm-mode=0660 -D nobody-group=nogroup -D sysupdate=disabled -D ukify=disabled -D docdir=/usr/share/doc/systemd-261.2 ..
   ninja
   ninja install
   tar -xf $S/systemd-man-pages-*.tar.* --no-same-owner --strip-components=1 -C /usr/share/man || true
@@ -117,7 +120,7 @@ pkg_mandb() {
 
 pkg_procpsng() {
   cd "$S"; tar -xf procps-ng-*.tar.*; cd procps-ng-*/
-  ./configure --prefix=/usr --docdir=/usr/share/doc/procps-ng-4.0.6 \
+  ./configure --prefix=/usr --docdir=/usr/share/doc/procps-ng-4.0.7 \
     --disable-static --disable-kill --enable-watch8bit --with-systemd
   make
   make install
@@ -130,7 +133,7 @@ pkg_utillinux() {
     --sbindir=/usr/sbin --disable-chfn-chsh --disable-login --disable-nologin \
     --disable-su --disable-setpriv --disable-runuser --disable-pylibmount \
     --disable-liblastlog2 --disable-static --without-python \
-    ADJTIME_PATH=/var/lib/hwclock/adjtime --docdir=/usr/share/doc/util-linux-2.41.3
+    ADJTIME_PATH=/var/lib/hwclock/adjtime --docdir=/usr/share/doc/util-linux-2.42.2
   make
   make install
   cd "$S"; rm -rf util-linux-*/
@@ -150,7 +153,7 @@ pkg_e2fsprogs() {
 pkg_stripping() {
   echo "Stripping binaries and libraries..."
   
-  save_usrlib="$(cd /usr/lib; ls ld-linux*[^g] 2>/dev/null || true) libc.so.6 libthread_db.so.1 libstdc++.so.6.0.34 libitm.so.1.0.0 libatomic.so.1.2.0"
+  save_usrlib="$(cd /usr/lib; ls ld-linux*[^g] 2>/dev/null || true) libc.so.6 libthread_db.so.1 $(cd /usr/lib; ls libstdc++.so.6.0.[0-9]* 2>/dev/null || true) libitm.so.1.0.0 libatomic.so.1.2.0"
   if [ -f /usr/lib/libquadmath.so.0.0.0 ]; then
       save_usrlib="$save_usrlib libquadmath.so.0.0.0"
   fi
@@ -168,7 +171,7 @@ pkg_stripping() {
   done
 
   online_usrbin="bash find strip"
-  online_usrlib="libbfd-2.46.0.20260210.so libsframe.so.3.0.0 libhistory.so.8.3 libncursesw.so.6.6 libm.so.6 libreadline.so.8.3 libz.so.1.3.2 libzstd.so.1.5.7 $(cd /usr/lib; find libnss*.so* -type f 2>/dev/null || true)"
+  online_usrlib="$(cd /usr/lib; ls libbfd-*.so libsframe.so.*.*.* 2>/dev/null || true) libhistory.so.8.3 libncursesw.so.6.6 libm.so.6 libreadline.so.8.3 libz.so.1.3.2 libzstd.so.1.5.7 $(cd /usr/lib; find libnss*.so* -type f 2>/dev/null || true)"
   
   for BIN in $online_usrbin; do
       if [ -f "/usr/bin/$BIN" ]; then
